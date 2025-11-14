@@ -8,8 +8,12 @@ class UserController extends BaseController {
     public function index() {
         $p = (int) ($_GET['page'] ?? 1);
         $per = (int) ($_GET['per_page'] ?? 10);
+        $search = $_GET['search'] ?? '';
+        $sort_by = $_GET['sort_by'] ?? 'id';
+        $sort_dir = $_GET['sort_dir'] ?? 'DESC';
+        
         $repo = new UserRepository($this->cfg);
-        $this->ok($repo->paginate(max(1, $p), min(100, max(1, $per))));
+        $this->ok($repo->paginate(max(1, $p), min(100, max(1, $per)), $search, $sort_by, $sort_dir));
     }
 
     public function show($id) {

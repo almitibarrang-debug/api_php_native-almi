@@ -9,7 +9,7 @@ return [
         'env' => 'local',
         'debug' => true,
         'base_url' => 'https://localhost/api-php-native_william/public',
-        'jwt_secret' => 'CHANGE_ME_to_a_long_random_secret_>=32_chars',
+        'jwt_secret' => 'luffy_gear_5_pirate_king_2025__132>=32_chars',
         'allowed_origins' => ['http://localhost:3000','http://localhost']
     ]
-    ];
+];
