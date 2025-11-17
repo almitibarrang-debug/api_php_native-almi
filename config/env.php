@@ -8,7 +8,7 @@ return [
     'app' => [
         'env' => 'local',
         'debug' => true,
-        'base_url' => 'https://localhost/api-php-native_william/public',
+        'base_url' => 'https://localhost/api_php_native-almi/public',
         'jwt_secret' => 'luffy_gear_5_pirate_king_2025__132>=32_chars',
         'allowed_origins' => ['http://localhost:3000','http://localhost']
     ]
