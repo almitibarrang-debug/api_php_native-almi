@@ -1,15 +1,15 @@
 <?php
 return [
     'db' => [
-        'dsn' => 'mysql:host=127.0.0.1;dbname=apiphp;charset=utf8mb4',
-        'user' => 'root',
-        'pass' => '',
+        'dsn' => 'mysql:host=sql206.infinityfree.com;dbname=if0_40439133_apiphp;charset=utf8mb4',
+        'user' => 'if0_40439133',
+        'pass' => '2dP6eoUvoKc',
     ],
     'app' => [
-        'env' => 'local',
-        'debug' => true,
-        'base_url' => 'https://localhost/api_php_native-almi/public',
-        'jwt_secret' => 'luffy_gear_5_pirate_king_2025__132>=32_chars',
-        'allowed_origins' => ['http://localhost:3000','http://localhost']
+        'env' => 'production',
+        'debug' => false,
+        'base_url' => 'https://Final-Almi-Tibarrang-223611003-D5.xo.je/public',
+        'jwt_secret' => 'almi123',
+        'allowed_origins' => ['https://Final-Almi-Tibarrang-223611003-D5.xo.je']
     ]
 ];
