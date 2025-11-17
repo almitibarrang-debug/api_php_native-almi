@@ -3,22 +3,54 @@
 ## Struktur Folder
 
 ```
-api-php-native/
-├── public/
-│   ├── index.php
-│   └── .htaccess
-├── src/
-│   ├── Controllers/
-│   ├── Helpers/
-│   ├── Middlewares/
-│   ├── Repositories/
-│   └── Validation/
+API_PHP_NATIVE-ALMI/
+│
 ├── config/
 │   └── env.php
-├── uploads/
+│
 ├── logs/
-├── README.md
-├── openapi-lite.yaml
+│
+├── logs5/
+│
+├── public/
+│   ├── .htaccess
+│   ├── index.php
+│   └── test.php
+│
+├── src/
+│   ├── Config/
+│   │   └── Database.php
+│   │
+│   ├── Controllers/
+│   │   ├── AuthController.php
+│   │   ├── BaseController.php
+│   │   ├── HealthController.php
+│   │   ├── JwtController.php
+│   │   ├── UploadController.php
+│   │   ├── UserController.php
+│   │   └── VersionController.php
+│   │
+│   ├── Helpers/
+│   │   ├── Jwt.php
+│   │   └── Response.php
+│   │
+│   ├── Middlewares/
+│   │   ├── AuthMiddleware.php
+│   │   └── CorsMiddleware.php
+│   │
+│   ├── Repositories/
+│   │   └── UserRepository.php
+│   │
+│   └── Validation/
+│       └── Validator.php
+│
+├── uploads/
+│
+├── API PHP Native.postman_collection.json
+├── api_contract.php
 ├── CHANGELOG.md
-└── API PHP Native.postman_collection.json
+├── composer.json
+├── jwt.php
+├── openapi-life.yaml
+└── README.md
 ```
