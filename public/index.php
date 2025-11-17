@@ -1,18 +1,19 @@
 <?php
 
 spl_autoload_register(function ($className) {
-    $basePath = __DIR__ . '/../';
+    $basePath = __DIR__;
     $className = str_replace('\\', '/', $className);
     $possiblePaths = ["$basePath/src/$className.php", "$basePath/$className.php"];
 
     foreach ($possiblePaths as $filePath) {
         if (file_exists($filePath)) {
             require $filePath;
+            return;
         }
     }
 });
 
-$config = require __DIR__ . '/../config/env.php';
+$config = require __DIR__ . '/config/env.php';
 
 use Src\Helpers\Response;
 use Src\Middlewares\CorsMiddleware;
@@ -29,19 +30,18 @@ const RATE_LIMIT_WINDOW_SECONDS = 60;
 $clientIp = $_SERVER['REMOTE_ADDR'];
 $storagePath = sys_get_temp_dir() . '/rate_limit_' . md5($clientIp);
 
-$rateLimitData = ['count' => 0, 'start' => time()];
+$rateLimitData = ['count' => 1, 'start' => time()];
 if (file_exists($storagePath)) {
-    $rateLimitData = json_decode(file_get_contents($storagePath), true);
-    if (time() - $rateLimitData['start'] < RATE_LIMIT_WINDOW_SECONDS) {
-        $rateLimitData['count']++;
-    } else {
-        $rateLimitData = ['count' => 1, 'start' => time()];
+    $decodedData = json_decode(file_get_contents($storagePath), true);
+    if (is_array($decodedData) && isset($decodedData['start'], $decodedData['count'])) {
+        if (time() - $decodedData['start'] < RATE_LIMIT_WINDOW_SECONDS) {
+            $rateLimitData['count'] = $decodedData['count'] + 1;
+            $rateLimitData['start'] = $decodedData['start'];
+        }
     }
-} else {
-    $rateLimitData = ['count' => 1, 'start' => time()];
 }
 
-file_put_contents($storagePath, json_encode($rateLimitData));
+@file_put_contents($storagePath, json_encode($rateLimitData));
 
 if ($rateLimitData['count'] > RATE_LIMIT_MAX_REQUESTS) {
     $retryAfter = RATE_LIMIT_WINDOW_SECONDS - (time() - $rateLimitData['start']);
@@ -54,11 +54,6 @@ $requestUri = strtok($_SERVER['REQUEST_URI'], '?');
 $basePath = dirname($_SERVER['SCRIPT_NAME']);
 $requestPath = '/' . trim(str_replace($basePath, '', $requestUri), '/');
 $requestMethod = $_SERVER['REQUEST_METHOD'];
-
-error_log("URI: " . $requestUri);
-error_log("Base: " . $basePath);
-error_log("Path: " . $requestPath);
-error_log("Method: " . $requestMethod);
 
 $routes = [
     ['GET', '/api/v1/health', 'Src\\Controllers\\HealthController@show'],
@@ -97,11 +92,13 @@ function matchRoute(array $routes, string $method, string $path)
 
 if (!$handlerSpec) {
     Response::jsonError(404, 'Route not found');
+    exit;
 }
 
 [$controllerClass, $actionMethod] = explode('@', $handlerSpec);
-if (!method_exists($controllerClass, $actionMethod)) {
+if (!class_exists($controllerClass) || !method_exists($controllerClass, $actionMethod)) {
     Response::jsonError(405, 'Method not allowed');
+    exit;
 }
 
 call_user_func_array([new $controllerClass($config), $actionMethod], $routeParams);

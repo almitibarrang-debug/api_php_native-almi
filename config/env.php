@@ -8,7 +8,7 @@ return [
     'app' => [
         'env' => 'production',
         'debug' => false,
-        'base_url' => 'https://Final-Almi-Tibarrang-223611003-D5.xo.je/public',
+        'base_url' => 'https://Final-Almi-Tibarrang-223611003-D5.xo.je',
         'jwt_secret' => 'almi123',
         'allowed_origins' => ['https://Final-Almi-Tibarrang-223611003-D5.xo.je']
     ]
