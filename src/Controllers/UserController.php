@@ -1,62 +1,100 @@
 <?php
+
 namespace Src\Controllers;
 
 use Src\Repositories\UserRepository;
 use Src\Validation\Validator;
 
-class UserController extends BaseController {
-    public function index() {
-        $p = (int) ($_GET['page'] ?? 1);
-        $per = (int) ($_GET['per_page'] ?? 10);
+class UserController extends BaseController
+{
+    public function index()
+    {
+        $page = (int)($_GET['page'] ?? 1);
+        $perPage = (int)($_GET['per_page'] ?? 10);
         $search = $_GET['search'] ?? '';
-        $sort_by = $_GET['sort_by'] ?? 'id';
-        $sort_dir = $_GET['sort_dir'] ?? 'DESC';
-        
-        $repo = new UserRepository($this->cfg);
-        $this->ok($repo->paginate(max(1, $p), min(100, max(1, $per)), $search, $sort_by, $sort_dir));
+        $sortBy = $_GET['sort_by'] ?? 'id';
+        $sortDir = $_GET['sort_dir'] ?? 'DESC';
+
+        $repository = new UserRepository($this->cfg);
+        $this->ok($repository->paginate(
+            max(1, $page),
+            min(100, max(1, $perPage)),
+            $search,
+            $sortBy,
+            $sortDir
+        ));
     }
 
-    public function show($id) {
-        $repo = new UserRepository($this->cfg);
-        $u = $repo->find((int)$id);
-        $u ? $this->ok($u) : $this->error(404, msg: 'User not found');
+    public function show($id)
+    {
+        $repository = new UserRepository($this->cfg);
+        $user = $repository->find((int)$id);
+
+        if ($user) {
+            $this->ok($user);
+        } else {
+            $this->error(404, 'User not found');
+        }
     }
 
-    public function store() {
-        $in = json_decode(file_get_contents('php://input'), true) ?? [];
-        $v = Validator::make($in, [
+    public function store()
+    {
+        $input = json_decode(file_get_contents('php://input'), true) ?? [];
+        $validator = Validator::make($input, [
             'name' => 'required|min:3|max:100',
             'email' => 'required|email|max:150',
             'password' => 'required|min:6|max:72',
             'role' => 'enum:user,admin'
         ]);
-        if ($v->fails()) return $this->error(422, 'Validation error', $v->errors());
 
-        $hash = password_hash($in['password'], PASSWORD_DEFAULT);
-        $repo = new UserRepository($this->cfg);
+        if ($validator->fails()) {
+            return $this->error(422, 'Validation error', $validator->errors());
+        }
+
+        $passwordHash = password_hash($input['password'], PASSWORD_DEFAULT);
+        $repository = new UserRepository($this->cfg);
+
         try {
-            $this->ok($repo->create($in['name'], $in['email'], $hash, $in['role'] ?? 'user'), 201);
-        } catch (\Throwable $e) {
-            $this->error(400, 'Create failed', ['details'=>$e->getMessage()]);
+            $this->ok(
+                $repository->create(
+                    $input['name'],
+                    $input['email'],
+                    $passwordHash,
+                    $input['role'] ?? 'user'
+                ),
+                201
+            );
+        } catch (\Throwable $exception) {
+            $this->error(400, 'Create failed', ['details' => $exception->getMessage()]);
         }
     }
 
-    public function update($id) {
-        $in = json_decode(file_get_contents('php://input'), true) ?? [];
-        $v = Validator::make($in, [
+    public function update($id)
+    {
+        $input = json_decode(file_get_contents('php://input'), true) ?? [];
+        $validator = Validator::make($input, [
             'name' => 'required|min:3|max:100',
             'email' => 'required|email|max:150',
             'role' => 'enum:user,admin'
         ]);
-        if ($v->fails()) return $this->error(422, 'Validation error', $v->errors());
 
-        $repo = new UserRepository($this->cfg);
-        $this->ok($repo->update((int)$id, $in['name'], $in['email'], $in['role']));
+        if ($validator->fails()) {
+            return $this->error(422, 'Validation error', $validator->errors());
+        }
+
+        $repository = new UserRepository($this->cfg);
+        $this->ok($repository->update((int)$id, $input['name'], $input['email'], $input['role']));
     }
 
-    public function destroy($id) {
-        $repo = new UserRepository($this->cfg);
-        $ok = $repo->delete((int)$id);
-        $ok ? $this->ok(['deleted' => true]) : $this->error(400, 'Delete failed');
+    public function destroy($id)
+    {
+        $repository = new UserRepository($this->cfg);
+        $isDeleted = $repository->delete((int)$id);
+
+        if ($isDeleted) {
+            $this->ok(['deleted' => true]);
+        } else {
+            $this->error(400, 'Delete failed');
+        }
     }
 }

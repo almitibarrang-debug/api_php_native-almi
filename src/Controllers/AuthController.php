@@ -1,4 +1,5 @@
 <?php
+
 namespace Src\Controllers;
 
 use Src\Config\Database;
@@ -8,28 +9,27 @@ use PDO;
 
 class AuthController extends BaseController
 {
-
     public function login()
     {
-        $in = json_decode(file_get_contents('php://input'), true) ?? [];
+        $input = json_decode(file_get_contents('php://input'), true) ?? [];
 
-        if (empty($in['email']) || empty($in['password'])) {
+        if (empty($input['email']) || empty($input['password'])) {
             return $this->error(422, 'Email & password required');
         }
 
         $db = Database::conn($this->cfg);
-        $s = $db->prepare('SELECT id, name, email, password_hash, role FROM users WHERE email = ?');
-        $s->execute([$in['email']]);
-        $u = $s->fetch(PDO::FETCH_ASSOC);
+        $statement = $db->prepare('SELECT id, name, email, password_hash, role FROM users WHERE email = ?');
+        $statement->execute([$input['email']]);
+        $user = $statement->fetch(PDO::FETCH_ASSOC);
 
-        if (!$u || !password_verify($in['password'], $u['password_hash'])) {
+        if (!$user || !password_verify($input['password'], $user['password_hash'])) {
             return $this->error(401, 'Invalid credentials');
         }
 
         $payload = [
-            'sub' => $u['id'],
-            'name' => $u['name'],
-            'role' => $u['role'],
+            'sub' => $user['id'],
+            'name' => $user['name'],
+            'role' => $user['role'],
             'iat' => time(),
             'exp' => time() + 3600
         ];

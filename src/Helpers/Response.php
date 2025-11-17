@@ -1,8 +1,11 @@
 <?php
+
 namespace Src\Helpers;
 
-class Response {
-    public static function json($data, $code = 200) {
+class Response
+{
+    public static function json($data, $code = 200): void
+    {
         header('Content-Type: application/json');
         http_response_code($code);
         echo json_encode([
@@ -12,7 +15,8 @@ class Response {
         exit;
     }
 
-    public static function jsonError($code, $message, $errors = []) {
+    public static function jsonError($code, $message, $errors = []): void
+    {
         header('Content-Type: application/json');
         http_response_code($code);
         echo json_encode([

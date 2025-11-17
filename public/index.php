@@ -1,74 +1,68 @@
 <?php
 
-spl_autoload_register(function ($c) {
-    $p = __DIR__ . '/../';
-    $c = str_replace('\\', '/', $c);
-    $paths = ["$p/src/$c.php", "$p/$c.php"];
-    foreach ($paths as $f) {
-        if (file_exists($f)) {
-            require $f;
+spl_autoload_register(function ($className) {
+    $basePath = __DIR__ . '/../';
+    $className = str_replace('\\', '/', $className);
+    $possiblePaths = ["$basePath/src/$className.php", "$basePath/$className.php"];
+
+    foreach ($possiblePaths as $filePath) {
+        if (file_exists($filePath)) {
+            require $filePath;
         }
     }
 });
 
-$cfg = require __DIR__ . '/../config/env.php';
+$config = require __DIR__ . '/../config/env.php';
 
 use Src\Helpers\Response;
 use Src\Middlewares\CorsMiddleware;
 
-// CORS preflight
-CorsMiddleware::handle($cfg);
+CorsMiddleware::handle($config);
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(204);
     exit;
 }
 
-// === RATE LIMITING ===
-$ip = $_SERVER['REMOTE_ADDR'];
-$limit = 5;          // jumlah request
-$window = 60;         // dalam detik (1 menit)
-$storage = sys_get_temp_dir() . '/rate_limit_' . md5($ip);
+const RATE_LIMIT_MAX_REQUESTS = 5;
+const RATE_LIMIT_WINDOW_SECONDS = 60;
 
-// ambil data lama
-$data = ['count' => 0, 'start' => time()];
-if (file_exists($storage)) {
-    $data = json_decode(file_get_contents($storage), true);
-    if (time() - $data['start'] < $window) {
-        $data['count']++;
+$clientIp = $_SERVER['REMOTE_ADDR'];
+$storagePath = sys_get_temp_dir() . '/rate_limit_' . md5($clientIp);
+
+$rateLimitData = ['count' => 0, 'start' => time()];
+if (file_exists($storagePath)) {
+    $rateLimitData = json_decode(file_get_contents($storagePath), true);
+    if (time() - $rateLimitData['start'] < RATE_LIMIT_WINDOW_SECONDS) {
+        $rateLimitData['count']++;
     } else {
-        // reset jendela waktu
-        $data = ['count' => 1, 'start' => time()];
+        $rateLimitData = ['count' => 1, 'start' => time()];
     }
 } else {
-    $data = ['count' => 1, 'start' => time()];
+    $rateLimitData = ['count' => 1, 'start' => time()];
 }
 
-// simpan data
-file_put_contents($storage, json_encode($data));
+file_put_contents($storagePath, json_encode($rateLimitData));
 
-// jika melewati batas
-if ($data['count'] > $limit) {
-    header('Retry-After: ' . ($window - (time() - $data['start'])));
+if ($rateLimitData['count'] > RATE_LIMIT_MAX_REQUESTS) {
+    $retryAfter = RATE_LIMIT_WINDOW_SECONDS - (time() - $rateLimitData['start']);
+    header('Retry-After: ' . $retryAfter);
     Response::jsonError(429, 'Too Many Requests');
     exit;
 }
 
-// === ROUTING ===
-$uri = strtok($_SERVER['REQUEST_URI'], '?');
-$base = dirname($_SERVER['SCRIPT_NAME']);
-$path = '/' . trim(str_replace($base, '', $uri), '/');
-$method = $_SERVER['REQUEST_METHOD'];
+$requestUri = strtok($_SERVER['REQUEST_URI'], '?');
+$basePath = dirname($_SERVER['SCRIPT_NAME']);
+$requestPath = '/' . trim(str_replace($basePath, '', $requestUri), '/');
+$requestMethod = $_SERVER['REQUEST_METHOD'];
 
-// Debug
-error_log("URI: " . $uri);
-error_log("Base: " . $base);
-error_log("Path: " . $path);
-error_log("Method: " . $method);
+error_log("URI: " . $requestUri);
+error_log("Base: " . $basePath);
+error_log("Path: " . $requestPath);
+error_log("Method: " . $requestMethod);
 
-// Routes map
 $routes = [
     ['GET', '/api/v1/health', 'Src\\Controllers\\HealthController@show'],
-    ['GET', '/api/v1/version', 'Controllers\\VersionController@show'],
+    ['GET', '/api/v1/version', 'Src\\Controllers\\VersionController@show'],
     ['POST', '/api/v1/auth/login', 'Src\\Controllers\\AuthController@login'],
     ['GET', '/api/v1/auth/verify', 'Src\\Controllers\\JwtController@verify'],
     ['POST', '/api/v1/auth/check', 'Src\\Controllers\\JwtController@check'],
@@ -80,31 +74,34 @@ $routes = [
     ['POST', '/api/v1/upload', 'Src\\Controllers\\UploadController@store']
 ];
 
-// Match route
-function matchRoute($routes, $method, $path) {
-    foreach ($routes as $r) {
-        [$m, $p, $h] = $r;
-        if ($m !== $method) {
+function matchRoute(array $routes, string $method, string $path)
+{
+    foreach ($routes as $route) {
+        [$routeMethod, $routePath, $handler] = $route;
+
+        if ($routeMethod !== $method) {
             continue;
         }
-        $regex = preg_replace('#\{[^\}]+\}#', '([\w-]+)', $p);
-        if (preg_match('#^' . $regex . '$#', $path, $mch)) {
-            array_shift($mch);
-            return [$h, $mch];
+
+        $routeRegex = preg_replace('#\{[^\}]+\}#', '([\w-]+)', $routePath);
+        if (preg_match('#^' . $routeRegex . '$#', $path, $matches)) {
+            array_shift($matches);
+            return [$handler, $matches];
         }
     }
+
     return [null, null];
 }
 
-[$handler, $params] = matchRoute($routes, $method, $path);
+[$handlerSpec, $routeParams] = matchRoute($routes, $requestMethod, $requestPath);
 
-if (!$handler) {
+if (!$handlerSpec) {
     Response::jsonError(404, 'Route not found');
 }
 
-[$class, $action] = explode('@', $handler);
-if (!method_exists($class, $action)) {
+[$controllerClass, $actionMethod] = explode('@', $handlerSpec);
+if (!method_exists($controllerClass, $actionMethod)) {
     Response::jsonError(405, 'Method not allowed');
 }
 
-call_user_func_array([new $class($cfg), $action], $params);
+call_user_func_array([new $controllerClass($config), $actionMethod], $routeParams);

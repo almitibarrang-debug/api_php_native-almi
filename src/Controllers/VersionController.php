@@ -1,11 +1,11 @@
 <?php
+
 namespace Src\Controllers;
 
 use Src\Helpers\Response;
 
 class VersionController
 {
-
     private array $config;
 
     public function __construct(array $config)

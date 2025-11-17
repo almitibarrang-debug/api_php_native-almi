@@ -4,15 +4,15 @@ namespace Src\Middlewares;
 
 class CorsMiddleware
 {
-    public static function handle(array $cfg)
+    public static function handle(array $cfg): void
     {
-        $origin  = $_SERVER['HTTP_ORIGIN'] ?? '*';
-        $allowed = $cfg['app']['allowed_origins'] ?? [];
+        $origin = $_SERVER['HTTP_ORIGIN'] ?? '*';
+        $allowedOrigins = $cfg['app']['allowed_origins'] ?? [];
 
-        if ($allowed && in_array($origin, $allowed, true)) {
+        if ($allowedOrigins && in_array($origin, $allowedOrigins, true)) {
             header("Access-Control-Allow-Origin: $origin");
             header('Vary: Origin');
-        } else if (empty($allowed)) {
+        } elseif (empty($allowedOrigins)) {
             header('Access-Control-Allow-Origin: *');
         }
 
